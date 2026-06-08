@@ -84,8 +84,7 @@ namespace MangaReader.Views
 
         private void FilterControls_Changed(object sender, RoutedEventArgs e)
         {
-            // Updated safety shield
-            if (TagFilterDropdown == null || SortDropdown == null || StatusDropdown == null) return;
+            if (TagFilterDropdown == null || SortDropdown == null || StatusDropdown == null || FavoritesOnlyCheckbox == null) return;
 
             if (TagFilterDropdown.SelectedItem is ComboBoxItem item && item.Content != null)
             {
@@ -116,11 +115,14 @@ namespace MangaReader.Views
                 statusFilter = statusItem.Content.ToString()!;
             }
 
+            bool showFavoritesOnly = FavoritesOnlyCheckbox.IsChecked == true;
+
             var filteredFolders = _masterFolderCache.Where(dir =>
             {
                 bool matchesTag = true;
                 bool matchesReadStatus = true;
                 bool matchesSearch = true;
+                bool matchesFavorite = true;
 
                 if (!string.IsNullOrWhiteSpace(_currentSearchQuery))
                 {
@@ -139,14 +141,15 @@ namespace MangaReader.Views
                     // Apply the specific Status rules
                     if (statusFilter == "Unread") matchesReadStatus = !data.IsRead;
                     else if (statusFilter == "Read") matchesReadStatus = data.IsRead;
+                    if (showFavoritesOnly) matchesFavorite = data.IsFavorite;
                 }
                 else
                 {
-                    // If it's not in the DB, it is unread. Hide it if user wants "Read" only.
                     if (statusFilter == "Read") matchesReadStatus = false;
+                    if (showFavoritesOnly) matchesFavorite = false;
                 }
 
-                return matchesTag && matchesReadStatus && matchesSearch;
+                return matchesTag && matchesReadStatus && matchesSearch && matchesFavorite;
             });
 
             string sortOption = "Recent";
@@ -201,6 +204,7 @@ namespace MangaReader.Views
                         bool isRead = dbData.ContainsKey(dir) ? dbData[dir].IsRead : false;
                         string tags = dbData.ContainsKey(dir) ? dbData[dir].Tags : "";
                         DateTime dateAdded = dbData.ContainsKey(dir) ? dbData[dir].DateAdded : DateTime.Now;
+                        bool isFavorite = dbData.ContainsKey(dir) ? dbData[dir].IsFavorite : false;
 
                         ImageSource? safeCoverImage = null;
                         try
@@ -221,6 +225,7 @@ namespace MangaReader.Views
                             CoverPath = coverPath,
                             CoverImage = safeCoverImage,
                             IsRead = isRead,
+                            IsFavorite = isFavorite,
                             Tags = tags,
                             DateAdded = dateAdded
                         });
@@ -312,10 +317,18 @@ namespace MangaReader.Views
         // --- HOTKEY LOGIC ---
         private void LibraryListBox_PreviewKeyDown(object sender, KeyEventArgs e)
         {
-            if (e.Key == Key.R && LibraryListBox.SelectedItem is MangaSeries selectedManga)
+            if (LibraryListBox.SelectedItem is MangaSeries selectedManga)
             {
-                ToggleReadStatus(selectedManga);
-                e.Handled = true; // Stops the listbox from trying to scroll
+                if (e.Key == Key.R)
+                {
+                    ToggleReadStatus(selectedManga);
+                    e.Handled = true;
+                }
+                else if (e.Key == Key.F) // NEW: The 'F' Hotkey
+                {
+                    ToggleFavoriteStatus(selectedManga);
+                    e.Handled = true;
+                }
             }
         }
 
@@ -330,13 +343,27 @@ namespace MangaReader.Views
             DatabaseManager.UpdateReadStatus(manga.FolderPath, manga.IsRead);
         }
 
+        private void ToggleFavoriteStatus(MangaSeries manga)
+        {
+            if (manga == null || string.IsNullOrEmpty(manga.FolderPath)) return;
+            manga.IsFavorite = !manga.IsFavorite;
+            DatabaseManager.UpdateFavoriteStatus(manga.FolderPath, manga.IsFavorite);
+        }
+
         // --- RIGHT CLICK MENU LOGIC ---
-        // The fixed right click method
         private void MangaCard_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
         {
             if (sender is Border border && border.DataContext is MangaSeries manga)
             {
                 var contextMenu = new ContextMenu();
+
+                var favMenuItem = new MenuItem
+                {
+                    Header = manga.IsFavorite ? "Remove from Favorites" : "❤ Add to Favorites",
+                    Foreground = manga.IsFavorite ? Brushes.White : (Brush)new BrushConverter().ConvertFrom("#FF4B4B")
+                };
+                favMenuItem.Click += (s, args) => ToggleFavoriteStatus(manga);
+                contextMenu.Items.Add(favMenuItem);
 
                 var readMenuItem = new MenuItem
                 {

@@ -15,13 +15,14 @@ namespace MangaReader
             using var connection = new SqliteConnection(ConnectionString);
             connection.Open();
 
-            // Rebuilt Schema with DateAdded
+            // Updated Schema to include IsFavorite
             string createTableSql = @"
                 CREATE TABLE IF NOT EXISTS MangaProgress (
                     FolderPath TEXT PRIMARY KEY,
                     IsRead INTEGER DEFAULT 0,
                     Tags TEXT DEFAULT '',
-                    DateAdded TEXT DEFAULT CURRENT_TIMESTAMP
+                    DateAdded TEXT DEFAULT CURRENT_TIMESTAMP,
+                    IsFavorite INTEGER DEFAULT 0
                 )";
             connection.Execute(createTableSql);
         }
@@ -40,17 +41,19 @@ namespace MangaReader
             transaction.Commit();
         }
 
-        // Now returns DateAdded as well
-        public static Dictionary<string, (bool IsRead, string Tags, DateTime DateAdded)> GetAllMangaData()
+        public static Dictionary<string, (bool IsRead, string Tags, DateTime DateAdded, bool IsFavorite)> GetAllMangaData()
         {
             using var connection = new SqliteConnection(ConnectionString);
-            var results = connection.Query("SELECT FolderPath, IsRead, Tags, DateAdded FROM MangaProgress");
+            var results = connection.Query("SELECT FolderPath, IsRead, Tags, DateAdded, IsFavorite FROM MangaProgress");
 
-            var dict = new Dictionary<string, (bool, string, DateTime)>();
+            var dict = new Dictionary<string, (bool, string, DateTime, bool)>();
             foreach (var row in results)
             {
                 DateTime parsedDate = DateTime.TryParse((string)row.DateAdded, out var d) ? d : DateTime.Now;
-                dict[(string)row.FolderPath] = ((long)row.IsRead == 1, (string)row.Tags ?? "", parsedDate);
+
+                bool isFavorite = row.IsFavorite != null && (long)row.IsFavorite == 1;
+
+                dict[(string)row.FolderPath] = ((long)row.IsRead == 1, (string)row.Tags ?? "", parsedDate, isFavorite);
             }
             return dict;
         }
@@ -93,6 +96,15 @@ namespace MangaReader
                 INSERT INTO MangaProgress (FolderPath, IsRead) VALUES (@Folder, @IsRead)
                 ON CONFLICT(FolderPath) DO UPDATE SET IsRead = @IsRead";
             connection.Execute(sql, new { Folder = folderPath, IsRead = isRead ? 1 : 0 });
+        }
+
+        public static void UpdateFavoriteStatus(string folderPath, bool isFavorite)
+        {
+            using var connection = new SqliteConnection(ConnectionString);
+            string sql = @"
+                INSERT INTO MangaProgress (FolderPath, IsFavorite) VALUES (@Folder, @IsFavorite)
+                ON CONFLICT(FolderPath) DO UPDATE SET IsFavorite = @IsFavorite";
+            connection.Execute(sql, new { Folder = folderPath, IsFavorite = isFavorite ? 1 : 0 });
         }
     }
 }

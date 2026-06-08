@@ -27,6 +27,18 @@ namespace MangaReader.Models
                 OnPropertyChanged(nameof(ReadBadgeVisibility)); // Tells the green badge to appear/disappear instantly!
             }
         }
+        private bool _isFavorite;
+        public bool IsFavorite
+        {
+            get => _isFavorite;
+            set
+            {
+                _isFavorite = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(FavoriteBadgeVisibility));
+            }
+        }
+        public Visibility FavoriteBadgeVisibility => IsFavorite ? Visibility.Visible : Visibility.Collapsed;
         public Visibility ReadBadgeVisibility => IsRead ? Visibility.Visible : Visibility.Collapsed;
 
         // SQLite TEXT maps beautifully to DateTime in most ORMs (like EF Core), 
