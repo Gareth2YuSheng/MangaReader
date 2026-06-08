@@ -1,12 +1,135 @@
 ﻿<UserControl x:Class="MangaReader.Views.LibraryView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             xmlns:local="clr-namespace:MangaReader.Views"
-             mc:Ignorable="d" 
-             d:DesignHeight="450" d:DesignWidth="800">
+             Background="#1E1E1E">
     <Grid>
-            
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0" Margin="20,15,20,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <TextBlock Grid.Column="0" Text="Library" Foreground="White" 
+                       FontSize="24" FontWeight="Bold" VerticalAlignment="Center"/>
+
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <CheckBox x:Name="UnreadOnlyCheckbox" Content="Unread Only" Foreground="LightGray" 
+                          VerticalAlignment="Center" Margin="0,0,15,0" Checked="FilterControls_Changed" Unchecked="FilterControls_Changed"/>
+
+                <TextBlock Text="Sort:" Foreground="LightGray" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                <ComboBox x:Name="SortDropdown" Width="80" Height="28" Margin="0,0,5,0" 
+                          VerticalContentAlignment="Center" SelectionChanged="FilterControls_Changed">
+                    <ComboBoxItem Content="Recent" IsSelected="True"/>
+                    <ComboBoxItem Content="Name"/>
+                </ComboBox>
+
+                <Button x:Name="SortDirectionButton" Content="▼ Desc" Focusable="False" Width="60" Height="28" 
+                        Margin="0,0,15,0" Click="SortDirectionButton_Click" ToolTip="Toggle Ascending/Descending"/>
+
+                <TextBlock Text="Tag:" Foreground="LightGray" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                <ComboBox x:Name="TagFilterDropdown" Width="120" Height="28" 
+                          VerticalContentAlignment="Center" SelectionChanged="FilterControls_Changed">
+                </ComboBox>
+            </StackPanel>
+        </Grid>
+
+        <ListBox Grid.Row="1" x:Name="LibraryListBox"
+                 ItemsSource="{Binding MangaLibrary}" 
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                 Background="Transparent" BorderThickness="0" Padding="10"
+                 MouseDoubleClick="LibraryListBox_MouseDoubleClick">
+            <ListBox.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <WrapPanel HorizontalAlignment="Center"/>
+                </ItemsPanelTemplate>
+            </ListBox.ItemsPanel>
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <Border Width="190" Height="290" Margin="10" CornerRadius="6" ClipToBounds="True">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Cursor" Value="Hand"/>
+                                <Style.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Effect">
+                                            <Setter.Value>
+                                                <DropShadowEffect BlurRadius="15" ShadowDepth="0" Color="White" Opacity="0.2"/>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+
+                        <Grid>
+                            <Image Source="{Binding CoverImage}" Stretch="UniformToFill" />
+
+                            <Border HorizontalAlignment="Left" VerticalAlignment="Top" 
+                                    Background="#CC28A745" Padding="8,4" Margin="5" CornerRadius="4"
+                                    Visibility="{Binding ReadBadgeVisibility}">
+                                <TextBlock Text="READ ✓" Foreground="White" FontSize="10" FontWeight="Bold"/>
+                            </Border>
+
+                            <Border VerticalAlignment="Bottom" Background="#E6222222" Padding="8,12,8,12">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Title}" Foreground="White" 
+                                               FontSize="14" FontWeight="SemiBold"
+                                               TextAlignment="Center" TextWrapping="Wrap">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="MaxHeight" Value="40"/>
+                                                <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
+                                                        <Setter Property="MaxHeight" Value="300"/>
+                                                        <Setter Property="TextTrimming" Value="None"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+
+                                    <ItemsControl ItemsSource="{Binding TagList}" Margin="0,5,0,0">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <WrapPanel Orientation="Horizontal" HorizontalAlignment="Center"/>
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Background="#4A4A4C" CornerRadius="4" Padding="6,2" Margin="2,2">
+                                                    <TextBlock Text="{Binding}" Foreground="#DDDDDD" FontSize="11" FontWeight="Medium"/>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="10,5,10,15">
+            <TextBlock Text="Items per page:" Foreground="White" VerticalAlignment="Center" Margin="0,0,10,0" FontSize="14"/>
+            <ComboBox x:Name="ItemsPerPageDropdown" Width="60" Height="28" Margin="0,0,20,0" 
+                      VerticalAlignment="Center" VerticalContentAlignment="Center"
+                      SelectionChanged="ItemsPerPageDropdown_SelectionChanged" Focusable="False">
+                <ComboBoxItem Content="10"/>
+                <ComboBoxItem Content="16"/>
+                <ComboBoxItem Content="24" IsSelected="True"/>
+                <ComboBoxItem Content="50"/>
+            </ComboBox>
+            <Button x:Name="LibPrevButton" Content="&lt; Prev Page" Focusable="False" Width="90" Height="28" Margin="5" Click="LibPrevButton_Click"/>
+            <TextBlock x:Name="LibPageIndicator" Text="Page 1 / 59" Foreground="White" VerticalAlignment="Center" Margin="15,0" FontSize="14"/>
+            <Button x:Name="LibNextButton" Content="Next Page &gt;" Focusable="False" Width="90" Height="28" Margin="5" Click="LibNextButton_Click"/>
+        </StackPanel>
     </Grid>
 </UserControl>

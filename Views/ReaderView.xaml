@@ -1,12 +1,87 @@
 ﻿<UserControl x:Class="MangaReader.Views.ReaderView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             xmlns:local="clr-namespace:MangaReader.Views"
-             mc:Ignorable="d" 
-             d:DesignHeight="450" d:DesignWidth="800">
+             Background="#1E1E1E">
     <Grid>
-            
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Background="#252526" Padding="10">
+            <Grid>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                    <Button x:Name="BackButton" Content="← Back to Library" Focusable="False"
+                            Padding="12,5,12,5" Click="BackButton_Click"/>
+                    <TextBlock x:Name="PageIndicator" Text="Page 0 / 0" Foreground="LightGray" 
+                               VerticalAlignment="Center" Margin="15,0,0,0" FontSize="14"/>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <TextBlock Text="Tags:" Foreground="LightGray" VerticalAlignment="Center" Margin="0,0,10,0"/>
+
+                    <ItemsControl ItemsSource="{Binding CurrentReaderTags}" VerticalAlignment="Center">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel Orientation="Horizontal" VerticalAlignment="Center"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="#4A4A4C" CornerRadius="4" Padding="6,3" Margin="0,0,5,0">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding}" Foreground="White" FontSize="12" FontWeight="SemiBold" 
+                                                   VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                        <Button Content="✕" Foreground="#FFAAAAAA" Background="Transparent" BorderThickness="0"
+                                                FontSize="10" FontWeight="Bold" Cursor="Hand" VerticalAlignment="Center"
+                                                Click="RemoveTagButton_Click" Focusable="False" ToolTip="Remove Tag"/>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <TextBox x:Name="NewTagTextBox" Width="100" Height="28" VerticalContentAlignment="Center"
+                             Background="#333" Foreground="White" BorderThickness="1" BorderBrush="#555" Padding="5,0"/>
+
+                    <Button Content="+" Focusable="False" Height="28" Width="28" Margin="2,0,0,0" 
+                            Click="AddNewTagButton_Click" ToolTip="Add typed tag"/>
+
+                    <Button x:Name="ShowTagsMenuButton" Content="▼" Focusable="False" Width="30" Height="28" 
+                            Margin="2,0,0,0" ToolTip="Choose from existing tags" Click="ShowTagsMenuButton_Click"/>
+
+                    <Popup x:Name="TagSuggestionsPopup" PlacementTarget="{Binding ElementName=NewTagTextBox}" 
+                           Placement="Bottom" StaysOpen="False" PopupAnimation="Slide">
+                        <Border Background="#2D2D30" BorderBrush="#555" BorderThickness="1" 
+                                Padding="10" MaxWidth="250" MaxHeight="200" CornerRadius="4">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                <ItemsControl x:Name="TagSuggestionsControl">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel Orientation="Horizontal"/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Button Content="{Binding}" Click="SuggestionButton_Click" Focusable="False"
+                                                    Background="#4A4A4C" Foreground="White" BorderThickness="0" 
+                                                    Padding="8,4" Margin="3" Cursor="Hand"/>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </Border>
+                    </Popup>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Image x:Name="MangaDisplay" Grid.Row="1" Margin="10" Stretch="Uniform" />
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="15">
+            <Button x:Name="PrevButton" Content="&lt; Previous" Focusable="False" Width="140" Height="40" Margin="5" Click="PrevButton_Click"/>
+            <Button x:Name="NextButton" Content="Next &gt;" Focusable="False" Width="140" Height="40" Margin="5" Click="NextButton_Click"/>
+        </StackPanel>
     </Grid>
 </UserControl>
