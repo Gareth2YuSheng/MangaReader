@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.IO.Compression;
 using System.Threading.Tasks;
 
@@ -6,64 +7,7 @@ namespace MangaReader
 {
     public static class MangaProcessor
     {
-        public static async Task ProcessNewZipsAsync(string rootPath)
-        {
-            string newFolderPath = Path.Combine(rootPath, "0_new");
-
-            // If the folder doesn't exist, create it
-            if (!Directory.Exists(newFolderPath))
-            {
-                Directory.CreateDirectory(newFolderPath);
-            }
-
-            // Find ONLY .zip files
-            var zipFiles = Directory.GetFiles(newFolderPath, "*.zip");
-            if (zipFiles.Length == 0) return;
-
-            // Run the heavy extraction on a background thread
-            await Task.Run(() =>
-            {
-                foreach (var zipFile in zipFiles)
-                {
-                    try
-                    {
-                        // Use the zip file's name as the new manga folder name
-                        string folderName = Path.GetFileNameWithoutExtension(zipFile);
-                        string destinationPath = Path.Combine(rootPath, folderName);
-
-                        // Only proceed if a folder with that name doesn't already exist
-                        if (!Directory.Exists(destinationPath))
-                        {
-                            LogMessage(newFolderPath, $"Starting extraction: {folderName}.zip");
-
-                            Directory.CreateDirectory(destinationPath);
-                            ZipFile.ExtractToDirectory(zipFile, destinationPath);
-
-                            LogMessage(newFolderPath, $"Successfully extracted: {folderName}");
-
-                            // The Cleanup Phase
-                            string finalJpg = Path.Combine(destinationPath, "final.jpg");
-                            string readMe = Path.Combine(destinationPath, "ReadMe.txt");
-
-                            if (File.Exists(finalJpg)) File.Delete(finalJpg);
-                            if (File.Exists(readMe)) File.Delete(readMe);
-
-                            LogMessage(newFolderPath, $"Cleaned up junk files for: {folderName}");
-                        }
-
-                        // Delete the original .zip to save hard drive space
-                        File.Delete(zipFile);
-                        LogMessage(newFolderPath, $"Deleted original zip: {folderName}.zip");
-                        LogMessage(newFolderPath, new string('-', 40)); // Adds a nice divider line between jobs
-                    }
-                    catch
-                    {
-                        // If a zip is corrupted or currently downloading, skip it and try next time
-                    }
-                }
-            });
-        }
-
+        // Only ONE ProcessNewZipsAsync method is needed!
         public static async Task ProcessNewZipsAsync(string rootPath, IProgress<string> progress = null)
         {
             string newFolderPath = Path.Combine(rootPath, "0_new");
@@ -88,16 +32,12 @@ namespace MangaReader
                         if (!Directory.Exists(destinationPath))
                         {
                             LogMessage(newFolderPath, $"Starting extraction: {folderName}.zip");
-
-                            // NEW: Report back to the UI!
                             progress?.Report($"Unzipping ({currentFile}/{zipFiles.Length}): {folderName}");
 
                             Directory.CreateDirectory(destinationPath);
                             ZipFile.ExtractToDirectory(zipFile, destinationPath);
 
                             LogMessage(newFolderPath, $"Successfully extracted: {folderName}");
-
-                            // NEW: Report cleanup
                             progress?.Report($"Cleaning: {folderName}");
 
                             string finalJpg = Path.Combine(destinationPath, "final.jpg");
@@ -108,9 +48,15 @@ namespace MangaReader
 
                             LogMessage(newFolderPath, $"Cleaned up junk files for: {folderName}");
                         }
+                        else
+                        {
+                            // Log that we skipped extraction because it's a duplicate
+                            LogMessage(newFolderPath, $"Duplicate found: '{folderName}' already exists. Skipping extraction.");
+                        }
 
+                        // Because this is OUTSIDE the if-statement, it will delete the zip whether it extracted it or skipped it!
                         File.Delete(zipFile);
-                        LogMessage(newFolderPath, $"Deleted original zip: {folderName}.zip");
+                        LogMessage(newFolderPath, $"Deleted zip: {folderName}.zip");
                         LogMessage(newFolderPath, new string('-', 40));
                     }
                     catch (Exception ex)
