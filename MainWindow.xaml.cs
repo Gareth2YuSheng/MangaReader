@@ -52,6 +52,18 @@ namespace MangaReader
                     ReaderComponent.GoToNextPage();
                     e.Handled = true;
                 }
+                // NEW: Jump to Start
+                else if (e.Key == Key.Home)
+                {
+                    ReaderComponent.GoToFirstPage();
+                    e.Handled = true;
+                }
+                // NEW: Jump to End
+                else if (e.Key == Key.End)
+                {
+                    ReaderComponent.GoToLastPage();
+                    e.Handled = true;
+                }
                 else if (e.Key == Key.Escape)
                 {
                     ReaderComponent_OnBackRequested();

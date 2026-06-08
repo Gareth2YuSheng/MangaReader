@@ -80,8 +80,10 @@
         <Image x:Name="MangaDisplay" Grid.Row="1" Margin="10" Stretch="Uniform" />
 
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="15">
-            <Button x:Name="PrevButton" Content="&lt; Previous" Focusable="False" Width="140" Height="40" Margin="5" Click="PrevButton_Click"/>
-            <Button x:Name="NextButton" Content="Next &gt;" Focusable="False" Width="140" Height="40" Margin="5" Click="NextButton_Click"/>
+            <Button x:Name="FirstButton" Content="&lt;&lt;" Focusable="False" Width="90" Height="40" Margin="5" Click="FirstButton_Click"/>
+            <Button x:Name="PrevButton" Content="&lt;" Focusable="False" Width="120" Height="40" Margin="5" Click="PrevButton_Click"/>
+            <Button x:Name="NextButton" Content="&gt;" Focusable="False" Width="120" Height="40" Margin="5" Click="NextButton_Click"/>
+            <Button x:Name="LastButton" Content="&gt;&gt;" Focusable="False" Width="90" Height="40" Margin="5" Click="LastButton_Click"/>
         </StackPanel>
     </Grid>
 </UserControl>

@@ -85,5 +85,14 @@ namespace MangaReader
             }
             return uniqueTags.OrderBy(t => t).ToList();
         }
+
+        public static void UpdateReadStatus(string folderPath, bool isRead)
+        {
+            using var connection = new SqliteConnection(ConnectionString);
+            string sql = @"
+                INSERT INTO MangaProgress (FolderPath, IsRead) VALUES (@Folder, @IsRead)
+                ON CONFLICT(FolderPath) DO UPDATE SET IsRead = @IsRead";
+            connection.Execute(sql, new { Folder = folderPath, IsRead = isRead ? 1 : 0 });
+        }
     }
 }

@@ -16,7 +16,17 @@ namespace MangaReader.Models
         public string? FolderPath { get; set; }
         public string? CoverPath { get; set; }
         public ImageSource? CoverImage { get; set; }
-        public bool IsRead { get; set; }
+        private bool _isRead;
+        public bool IsRead
+        {
+            get => _isRead;
+            set
+            {
+                _isRead = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(ReadBadgeVisibility)); // Tells the green badge to appear/disappear instantly!
+            }
+        }
         public Visibility ReadBadgeVisibility => IsRead ? Visibility.Visible : Visibility.Collapsed;
 
         // SQLite TEXT maps beautifully to DateTime in most ORMs (like EF Core), 

@@ -185,5 +185,26 @@ namespace MangaReader.Views
             TagSuggestionsControl.ItemsSource = existingTags;
             TagSuggestionsPopup.IsOpen = true;
         }
+
+        public void GoToFirstPage()
+        {
+            if (_currentReaderIndex > 0)
+            {
+                _currentReaderIndex = 0;
+                ShowImage(_currentReaderIndex);
+            }
+        }
+
+        public void GoToLastPage()
+        {
+            if (_readerImageFiles.Count > 0 && _currentReaderIndex < _readerImageFiles.Count - 1)
+            {
+                _currentReaderIndex = _readerImageFiles.Count - 1;
+                ShowImage(_currentReaderIndex);
+            }
+        }
+
+        private void FirstButton_Click(object sender, RoutedEventArgs e) => GoToFirstPage();
+        private void LastButton_Click(object sender, RoutedEventArgs e) => GoToLastPage();
     }
 }

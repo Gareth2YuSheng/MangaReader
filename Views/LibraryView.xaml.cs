@@ -84,15 +84,13 @@ namespace MangaReader.Views
 
         private void FilterControls_Changed(object sender, RoutedEventArgs e)
         {
-            if (TagFilterDropdown == null || SortDropdown == null || UnreadOnlyCheckbox == null) return;
+            // Updated safety shield
+            if (TagFilterDropdown == null || SortDropdown == null || StatusDropdown == null) return;
 
             if (TagFilterDropdown.SelectedItem is ComboBoxItem item && item.Content != null)
             {
                 _currentTagFilter = item.Content.ToString()!;
-                if (_masterFolderCache.Count > 0)
-                {
-                    ApplyFilterAndLoad();
-                }
+                if (_masterFolderCache.Count > 0) ApplyFilterAndLoad();
             }
         }
 
@@ -110,23 +108,26 @@ namespace MangaReader.Views
         private void ApplyFilterAndLoad()
         {
             var dbData = DatabaseManager.GetAllMangaData();
-            bool showUnreadOnly = UnreadOnlyCheckbox.IsChecked == true;
+
+            // Grab the current text from the Status dropdown
+            string statusFilter = "All";
+            if (StatusDropdown.SelectedItem is ComboBoxItem statusItem)
+            {
+                statusFilter = statusItem.Content.ToString()!;
+            }
 
             var filteredFolders = _masterFolderCache.Where(dir =>
             {
                 bool matchesTag = true;
                 bool matchesReadStatus = true;
-                bool matchesSearch = true; // NEW: Assume it matches until proven otherwise
+                bool matchesSearch = true;
 
-                // NEW: Search Filter Check
                 if (!string.IsNullOrWhiteSpace(_currentSearchQuery))
                 {
                     string folderName = new DirectoryInfo(dir).Name;
-                    // OrdinalIgnoreCase means it will match "naruto" with "Naruto"
                     matchesSearch = folderName.Contains(_currentSearchQuery, StringComparison.OrdinalIgnoreCase);
                 }
 
-                // Tag and Read Status Checks
                 if (dbData.TryGetValue(dir, out var data))
                 {
                     if (_currentTagFilter != "All")
@@ -134,11 +135,17 @@ namespace MangaReader.Views
                         var tags = data.Tags.Split(',').Select(t => t.Trim());
                         matchesTag = tags.Contains(_currentTagFilter, StringComparer.OrdinalIgnoreCase);
                     }
-                    if (showUnreadOnly) matchesReadStatus = !data.IsRead;
-                }
-                else if (showUnreadOnly) matchesReadStatus = true;
 
-                // Ensure it passes ALL active filters to be shown
+                    // Apply the specific Status rules
+                    if (statusFilter == "Unread") matchesReadStatus = !data.IsRead;
+                    else if (statusFilter == "Read") matchesReadStatus = data.IsRead;
+                }
+                else
+                {
+                    // If it's not in the DB, it is unread. Hide it if user wants "Read" only.
+                    if (statusFilter == "Read") matchesReadStatus = false;
+                }
+
                 return matchesTag && matchesReadStatus && matchesSearch;
             });
 
@@ -149,21 +156,20 @@ namespace MangaReader.Views
             }
 
             var naturalSorter = new NaturalSortComparer();
-            var baseSort = filteredFolders.OrderBy(dir => dbData.ContainsKey(dir) ? dbData[dir].IsRead : false);
 
             if (sortOption == "Name")
             {
                 if (_isSortDescending)
-                    _allMangaFolders = baseSort.ThenByDescending(dir => new DirectoryInfo(dir).Name, naturalSorter).ToList();
+                    _allMangaFolders = filteredFolders.OrderByDescending(dir => new DirectoryInfo(dir).Name, naturalSorter).ToList();
                 else
-                    _allMangaFolders = baseSort.ThenBy(dir => new DirectoryInfo(dir).Name, naturalSorter).ToList();
+                    _allMangaFolders = filteredFolders.OrderBy(dir => new DirectoryInfo(dir).Name, naturalSorter).ToList();
             }
             else
             {
                 if (_isSortDescending)
-                    _allMangaFolders = baseSort.ThenByDescending(dir => dbData.ContainsKey(dir) ? dbData[dir].DateAdded : DateTime.MinValue).ToList();
+                    _allMangaFolders = filteredFolders.OrderByDescending(dir => dbData.ContainsKey(dir) ? dbData[dir].DateAdded : DateTime.MinValue).ToList();
                 else
-                    _allMangaFolders = baseSort.ThenBy(dir => dbData.ContainsKey(dir) ? dbData[dir].DateAdded : DateTime.MinValue).ToList();
+                    _allMangaFolders = filteredFolders.OrderBy(dir => dbData.ContainsKey(dir) ? dbData[dir].DateAdded : DateTime.MinValue).ToList();
             }
 
             _currentLibraryPage = 0;
@@ -300,6 +306,116 @@ namespace MangaReader.Views
             {
                 _currentLibraryPage++;
                 await LoadLibraryPageAsync(_currentLibraryPage);
+            }
+        }
+
+        // --- HOTKEY LOGIC ---
+        private void LibraryListBox_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.R && LibraryListBox.SelectedItem is MangaSeries selectedManga)
+            {
+                ToggleReadStatus(selectedManga);
+                e.Handled = true; // Stops the listbox from trying to scroll
+            }
+        }
+
+        private void ToggleReadStatus(MangaSeries manga)
+        {
+            if (manga == null || string.IsNullOrEmpty(manga.FolderPath)) return;
+
+            // Flip the status
+            manga.IsRead = !manga.IsRead;
+
+            // Save to database
+            DatabaseManager.UpdateReadStatus(manga.FolderPath, manga.IsRead);
+        }
+
+        // --- RIGHT CLICK MENU LOGIC ---
+        // The fixed right click method
+        private void MangaCard_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            if (sender is Border border && border.DataContext is MangaSeries manga)
+            {
+                var contextMenu = new ContextMenu();
+
+                var readMenuItem = new MenuItem
+                {
+                    Header = manga.IsRead ? "Mark as Unread" : "Mark as Read",
+                    FontWeight = FontWeights.Bold
+                };
+                readMenuItem.Click += (s, args) => ToggleReadStatus(manga);
+                contextMenu.Items.Add(readMenuItem);
+
+                contextMenu.Items.Add(new Separator());
+
+                var existingTags = DatabaseManager.GetAllUniqueTags();
+                var tagMenuItem = new MenuItem { Header = "Quick Tag" };
+
+                if (existingTags.Count == 0)
+                    tagMenuItem.Items.Add(new MenuItem { Header = "No tags created yet", IsEnabled = false });
+                else
+                {
+                    foreach (var tag in existingTags)
+                    {
+                        var tItem = new MenuItem { Header = tag };
+                        if (manga.TagList.Contains(tag, StringComparer.OrdinalIgnoreCase))
+                        {
+                            tItem.IsEnabled = false;
+                            tItem.Header = $"{tag} (Added)";
+                        }
+                        else tItem.Click += (s, args) => AddTagFromLibrary(manga, tag);
+
+                        tagMenuItem.Items.Add(tItem);
+                    }
+                }
+                contextMenu.Items.Add(tagMenuItem);
+
+                border.ContextMenu = contextMenu;
+
+                // FORCES THE MENU TO OPEN INSTANTLY ON THE FIRST CLICK
+                contextMenu.IsOpen = true;
+                e.Handled = true;
+            }
+        }
+
+        // The new Library First/Last Page buttons
+        private async void LibFirstButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_currentLibraryPage > 0)
+            {
+                _currentLibraryPage = 0;
+                await LoadLibraryPageAsync(_currentLibraryPage);
+            }
+        }
+
+        private async void LibLastButton_Click(object sender, RoutedEventArgs e)
+        {
+            int maxPages = (int)Math.Ceiling((double)_allMangaFolders.Count / _itemsPerPage);
+            if (_currentLibraryPage < maxPages - 1)
+            {
+                _currentLibraryPage = maxPages - 1;
+                await LoadLibraryPageAsync(_currentLibraryPage);
+            }
+        }
+
+        private void AddTagFromLibrary(MangaSeries manga, string newTag)
+        {
+            if (manga == null || string.IsNullOrEmpty(manga.FolderPath)) return;
+
+            var tags = manga.TagList;
+            if (!tags.Contains(newTag, StringComparer.OrdinalIgnoreCase))
+            {
+                tags.Add(newTag);
+                string finalTags = string.Join(", ", tags);
+
+                // Update DB
+                DatabaseManager.SaveTags(manga.FolderPath, finalTags);
+
+                // Update UI (Because of our property setter, the pills draw instantly)
+                manga.Tags = finalTags;
+
+                // Ensure the top filter dropdown updates if it's a brand new tag
+                PopulateTagDropdown();
             }
         }
     }

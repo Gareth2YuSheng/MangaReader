@@ -26,8 +26,13 @@
                      BorderThickness="1" BorderBrush="#555" Padding="5,0"
                      TextChanged="SearchBox_TextChanged"/>
 
-                <CheckBox x:Name="UnreadOnlyCheckbox" Content="Unread Only" Foreground="LightGray" 
-                    VerticalAlignment="Center" Margin="0,0,15,0" Checked="FilterControls_Changed" Unchecked="FilterControls_Changed"/>
+                <TextBlock Text="Status:" Foreground="LightGray" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                <ComboBox x:Name="StatusDropdown" Width="90" Height="28" Margin="0,0,15,0" 
+                    VerticalContentAlignment="Center" SelectionChanged="FilterControls_Changed">
+                    <ComboBoxItem Content="All" IsSelected="True"/>
+                    <ComboBoxItem Content="Unread"/>
+                    <ComboBoxItem Content="Read"/>
+                </ComboBox>
 
                 <TextBlock Text="Sort:" Foreground="LightGray" VerticalAlignment="Center" Margin="0,0,5,0"/>
                 <ComboBox x:Name="SortDropdown" Width="80" Height="28" Margin="0,0,5,0" 
@@ -47,10 +52,11 @@
         </Grid>
 
         <ListBox Grid.Row="1" x:Name="LibraryListBox"
-                 ItemsSource="{Binding MangaLibrary}" 
-                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                 Background="Transparent" BorderThickness="0" Padding="10"
-                 MouseDoubleClick="LibraryListBox_MouseDoubleClick">
+             ItemsSource="{Binding MangaLibrary}" 
+             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+             Background="Transparent" BorderThickness="0" Padding="10"
+             MouseDoubleClick="LibraryListBox_MouseDoubleClick"
+             PreviewKeyDown="LibraryListBox_PreviewKeyDown">
             <ListBox.ItemsPanel>
                 <ItemsPanelTemplate>
                     <WrapPanel HorizontalAlignment="Center"/>
@@ -58,7 +64,9 @@
             </ListBox.ItemsPanel>
             <ListBox.ItemTemplate>
                 <DataTemplate>
-                    <Border Width="190" Height="290" Margin="10" CornerRadius="6" ClipToBounds="True">
+                    <Border Width="190" Height="290" Margin="10" CornerRadius="6" ClipToBounds="True"
+                        Background="Transparent" 
+                        MouseRightButtonUp="MangaCard_MouseRightButtonUp">
                         <Border.Style>
                             <Style TargetType="Border">
                                 <Setter Property="Cursor" Value="Hand"/>
@@ -134,9 +142,14 @@
                 <ComboBoxItem Content="24" IsSelected="True"/>
                 <ComboBoxItem Content="50"/>
             </ComboBox>
-            <Button x:Name="LibPrevButton" Content="&lt; Prev Page" Focusable="False" Width="90" Height="28" Margin="5" Click="LibPrevButton_Click"/>
+
+            <Button x:Name="LibFirstButton" Content="&lt;&lt;" Focusable="False" Width="70" Height="28" Margin="5" Click="LibFirstButton_Click"/>
+            <Button x:Name="LibPrevButton" Content="&lt;" Focusable="False" Width="70" Height="28" Margin="5" Click="LibPrevButton_Click"/>
+
             <TextBlock x:Name="LibPageIndicator" Text="Page 1 / 59" Foreground="White" VerticalAlignment="Center" Margin="15,0" FontSize="14"/>
-            <Button x:Name="LibNextButton" Content="Next Page &gt;" Focusable="False" Width="90" Height="28" Margin="5" Click="LibNextButton_Click"/>
+
+            <Button x:Name="LibNextButton" Content="&gt;" Focusable="False" Width="70" Height="28" Margin="5" Click="LibNextButton_Click"/>
+            <Button x:Name="LibLastButton" Content="&gt;&gt;" Focusable="False" Width="70" Height="28" Margin="5" Click="LibLastButton_Click"/>
         </StackPanel>
     </Grid>
 </UserControl>
