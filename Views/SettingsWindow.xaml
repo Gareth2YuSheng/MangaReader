@@ -5,13 +5,19 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:MangaReader.Views"
         mc:Ignorable="d"
-        Title="Settings" Height="200" Width="400" WindowStartupLocation="CenterOwner">
+        Title="Settings" Height="200" Width="400" SizeToContent="Height" 
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize">
     <StackPanel Margin="20">
         <TextBlock Text="Manga Root Path:" FontWeight="Bold" Margin="0,0,0,5"/>
         <StackPanel Orientation="Horizontal">
             <TextBox x:Name="PathTextBox" Width="280" Height="25"/>
             <Button Content="..." Width="40" Height="25" Click="BrowseButton_Click" Margin="5,0,0,0"/>
         </StackPanel>
+
+        <CheckBox x:Name="AutoProcessCheckBox" Content="Auto-extract &amp; clean .zip files from '0_new' folder" 
+                  Margin="0,20,0,0" FontWeight="SemiBold"/>
+
         <Button Content="Save &amp; Close" Click="SaveButton_Click" Margin="0,20,0,0" Height="30"/>
     </StackPanel>
 </Window>

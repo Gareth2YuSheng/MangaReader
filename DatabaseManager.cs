@@ -128,5 +128,29 @@ namespace MangaReader
             string sql = "INSERT INTO Settings (Key, Value) VALUES (@Key, @Value) ON CONFLICT(Key) DO UPDATE SET Value = @Value";
             connection.Execute(sql, new { Key = key, Value = value });
         }
+
+        public static void CleanOrphanedRecords(IEnumerable<string> validFolderPaths)
+        {
+            using var connection = new SqliteConnection(ConnectionString);
+            connection.Open();
+
+            // 1. Get every folder path currently saved in the database
+            var dbPaths = connection.Query<string>("SELECT FolderPath FROM MangaProgress").ToList();
+
+            // 2. Cross-reference them to find paths that are in the DB, but NOT on the hard drive
+            var validPathSet = new HashSet<string>(validFolderPaths, StringComparer.OrdinalIgnoreCase);
+            var orphans = dbPaths.Where(path => !validPathSet.Contains(path)).ToList();
+
+            // 3. If we found any ghosts, delete them!
+            if (orphans.Count > 0)
+            {
+                using var transaction = connection.BeginTransaction();
+                string sql = "DELETE FROM MangaProgress WHERE FolderPath = @Folder";
+
+                // Execute the delete for every orphaned folder
+                connection.Execute(sql, orphans.Select(f => new { Folder = f }), transaction: transaction);
+                transaction.Commit();
+            }
+        }
     }
 }

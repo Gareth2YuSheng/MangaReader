@@ -5,11 +5,13 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Threading;
 
 namespace MangaReader.Views
 {
@@ -29,6 +31,7 @@ namespace MangaReader.Views
         private bool _isSortDescending = true;
         private readonly string[] _validExtensions = { ".jpg", ".jpeg", ".png", ".webp" };
         private string _currentSearchQuery = "";
+        private CancellationTokenSource? _loadCts;
 
         public ObservableCollection<MangaSeries> MangaLibrary { get; set; }
 
@@ -61,7 +64,7 @@ namespace MangaReader.Views
         {
             string currentPath = RootMangaPath;
 
-            //If no path is set, or the path is invalid, prompt the user
+            // 1. The Gatekeeper: If no path is set, prompt the user
             if (string.IsNullOrWhiteSpace(currentPath) || !Directory.Exists(currentPath))
             {
                 MangaLibrary.Clear();
@@ -69,24 +72,45 @@ namespace MangaReader.Views
 
                 MessageBox.Show("Welcome! Please set your Manga Root Folder to load your library.", "Setup Required", MessageBoxButton.OK, MessageBoxImage.Information);
 
-                // Automatically open the Settings window
                 var settings = new SettingsWindow { Owner = Window.GetWindow(this) };
-                settings.ShowDialog();
+                if (settings.ShowDialog() == true)
+                {
+                    currentPath = RootMangaPath;
+                }
 
-                // Re-check the path after they close the settings window
-                currentPath = RootMangaPath;
-
-                // If they closed the settings without setting a valid path, just stop loading
                 if (string.IsNullOrWhiteSpace(currentPath) || !Directory.Exists(currentPath)) return;
             }
 
-            // Proceed with loading using the newly confirmed path
+            // === THE PREPROCESSOR ===
+            bool autoProcess = DatabaseManager.GetSetting("AutoProcessZips", "False") == "True";
+            if (autoProcess)
+            {
+                // 1. Show the overlay
+                LoadingOverlay.Visibility = Visibility.Visible;
+
+                // 2. Create the Progress object. This safely updates the TextBlock on the UI thread.
+                var progressReporter = new Progress<string>(statusMessage =>
+                {
+                    LoadingStatusText.Text = statusMessage;
+                });
+
+                // 3. Run the processor and pass in our reporter
+                await MangaProcessor.ProcessNewZipsAsync(currentPath, progressReporter);
+
+                // 4. Hide the overlay when completely finished
+                LoadingOverlay.Visibility = Visibility.Collapsed;
+            }
+            // =============================
+
+            // 2. Proceed with loading using the newly confirmed/processed path
             _masterFolderCache = Directory.GetDirectories(currentPath)
                 .Where(dir => Directory.EnumerateFiles(dir, "*.*", SearchOption.TopDirectoryOnly)
                 .Any(f => IsImageFile(f)))
                 .ToList();
 
             DatabaseManager.SyncNewFolders(_masterFolderCache);
+            DatabaseManager.CleanOrphanedRecords(_masterFolderCache);
+
             PopulateTagDropdown();
         }
 
@@ -201,6 +225,11 @@ namespace MangaReader.Views
 
         private async Task LoadLibraryPageAsync(int pageIndex)
         {
+            // 1. If a previous load is still running, cancel it!
+            _loadCts?.Cancel();
+            _loadCts = new CancellationTokenSource();
+            var token = _loadCts.Token;
+
             MangaLibrary.Clear();
 
             int startIndex = pageIndex * _itemsPerPage;
@@ -216,6 +245,9 @@ namespace MangaReader.Views
 
                 foreach (var dir in foldersForThisPage)
                 {
+                    // 2. Early exit: If the user typed another letter while we were working, stop decoding images to save CPU!
+                    if (token.IsCancellationRequested) return temp;
+
                     var directoryInfo = new DirectoryInfo(dir);
                     string? coverPath = GetOrFindCover(dir);
 
@@ -252,7 +284,10 @@ namespace MangaReader.Views
                     }
                 }
                 return temp;
-            });
+            }, token);
+
+            // 3. THE MAGIC SHIELD: If this task was cancelled while it was awaiting the background thread, do NOT update the UI.
+            if (token.IsCancellationRequested) return;
 
             foreach (var item in pageItems) MangaLibrary.Add(item);
             _ = PreloadNextPagesAsync(pageIndex + 1);

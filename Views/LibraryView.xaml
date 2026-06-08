@@ -167,5 +167,17 @@
             <Button x:Name="LibNextButton" Content="&gt;" Focusable="False" Width="70" Height="28" Margin="5" Click="LibNextButton_Click"/>
             <Button x:Name="LibLastButton" Content="&gt;&gt;" Focusable="False" Width="70" Height="28" Margin="5" Click="LibLastButton_Click"/>
         </StackPanel>
+
+        <Border x:Name="LoadingOverlay" Grid.RowSpan="3" Background="#DC1E1E1E" 
+                Visibility="Collapsed" Panel.ZIndex="100">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                <ProgressBar IsIndeterminate="True" Width="250" Height="6" Margin="0,0,0,15" 
+                             Foreground="#FF4B4B" Background="#333" BorderThickness="0"/>
+
+                <TextBlock x:Name="LoadingStatusText" Text="Initializing..." 
+                           Foreground="White" FontSize="16" FontWeight="SemiBold" 
+                           TextAlignment="Center"/>
+            </StackPanel>
+        </Border>
     </Grid>
 </UserControl>
