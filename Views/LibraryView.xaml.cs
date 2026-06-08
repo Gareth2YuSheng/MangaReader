@@ -28,6 +28,7 @@ namespace MangaReader.Views
         private List<string> _masterFolderCache = new List<string>();
         private bool _isSortDescending = true;
         private readonly string[] _validExtensions = { ".jpg", ".jpeg", ".png", ".webp" };
+        private string _currentSearchQuery = "";
 
         public ObservableCollection<MangaSeries> MangaLibrary { get; set; }
 
@@ -95,6 +96,17 @@ namespace MangaReader.Views
             }
         }
 
+        private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            // Grab the text and convert to lowercase for easy searching
+            _currentSearchQuery = SearchBox.Text.Trim();
+
+            if (_masterFolderCache.Count > 0)
+            {
+                ApplyFilterAndLoad();
+            }
+        }
+
         private void ApplyFilterAndLoad()
         {
             var dbData = DatabaseManager.GetAllMangaData();
@@ -104,7 +116,17 @@ namespace MangaReader.Views
             {
                 bool matchesTag = true;
                 bool matchesReadStatus = true;
+                bool matchesSearch = true; // NEW: Assume it matches until proven otherwise
 
+                // NEW: Search Filter Check
+                if (!string.IsNullOrWhiteSpace(_currentSearchQuery))
+                {
+                    string folderName = new DirectoryInfo(dir).Name;
+                    // OrdinalIgnoreCase means it will match "naruto" with "Naruto"
+                    matchesSearch = folderName.Contains(_currentSearchQuery, StringComparison.OrdinalIgnoreCase);
+                }
+
+                // Tag and Read Status Checks
                 if (dbData.TryGetValue(dir, out var data))
                 {
                     if (_currentTagFilter != "All")
@@ -116,7 +138,8 @@ namespace MangaReader.Views
                 }
                 else if (showUnreadOnly) matchesReadStatus = true;
 
-                return matchesTag && matchesReadStatus;
+                // Ensure it passes ALL active filters to be shown
+                return matchesTag && matchesReadStatus && matchesSearch;
             });
 
             string sortOption = "Recent";
