@@ -19,7 +19,7 @@ namespace MangaReader.Views
         public delegate void MangaSelectedHandler(string folderPath);
         public event MangaSelectedHandler? OnMangaSelected;
 
-        private string _rootMangaPath = @"C:\Users\Gareth\Pictures\Doujins";
+        private string RootMangaPath => DatabaseManager.GetSetting("RootPath", "");
         private List<string> _allMangaFolders = new List<string>();
         private int _currentLibraryPage = 0;
         private int _itemsPerPage = 24;
@@ -59,9 +59,29 @@ namespace MangaReader.Views
 
         private async Task PopulateLibraryViewAsync()
         {
-            if (!Directory.Exists(_rootMangaPath)) return;
+            string currentPath = RootMangaPath;
 
-            _masterFolderCache = Directory.GetDirectories(_rootMangaPath)
+            //If no path is set, or the path is invalid, prompt the user
+            if (string.IsNullOrWhiteSpace(currentPath) || !Directory.Exists(currentPath))
+            {
+                MangaLibrary.Clear();
+                _masterFolderCache.Clear();
+
+                MessageBox.Show("Welcome! Please set your Manga Root Folder to load your library.", "Setup Required", MessageBoxButton.OK, MessageBoxImage.Information);
+
+                // Automatically open the Settings window
+                var settings = new SettingsWindow { Owner = Window.GetWindow(this) };
+                settings.ShowDialog();
+
+                // Re-check the path after they close the settings window
+                currentPath = RootMangaPath;
+
+                // If they closed the settings without setting a valid path, just stop loading
+                if (string.IsNullOrWhiteSpace(currentPath) || !Directory.Exists(currentPath)) return;
+            }
+
+            // Proceed with loading using the newly confirmed path
+            _masterFolderCache = Directory.GetDirectories(currentPath)
                 .Where(dir => Directory.EnumerateFiles(dir, "*.*", SearchOption.TopDirectoryOnly)
                 .Any(f => IsImageFile(f)))
                 .ToList();
@@ -443,6 +463,17 @@ namespace MangaReader.Views
 
                 // Ensure the top filter dropdown updates if it's a brand new tag
                 PopulateTagDropdown();
+            }
+        }
+
+        private void SettingsButton_Click(object sender, RoutedEventArgs e)
+        {
+            var settings = new SettingsWindow { Owner = Window.GetWindow(this) };
+
+            // Only reload IF they actually clicked the Save button
+            if (settings.ShowDialog() == true)
+            {
+                _ = PopulateLibraryViewAsync();
             }
         }
     }

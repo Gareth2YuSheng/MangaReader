@@ -51,6 +51,8 @@
                 <ComboBox x:Name="TagFilterDropdown" Width="120" Height="28" 
                     VerticalContentAlignment="Center" SelectionChanged="FilterControls_Changed">
                 </ComboBox>
+
+                <Button Content="⚙" Click="SettingsButton_Click" Width="30" Margin="5,0"/>
             </StackPanel>
         </Grid>
 

@@ -15,8 +15,8 @@ namespace MangaReader
             using var connection = new SqliteConnection(ConnectionString);
             connection.Open();
 
-            // Updated Schema to include IsFavorite
-            string createTableSql = @"
+            // 1. Existing table
+            string createProgressSql = @"
                 CREATE TABLE IF NOT EXISTS MangaProgress (
                     FolderPath TEXT PRIMARY KEY,
                     IsRead INTEGER DEFAULT 0,
@@ -24,7 +24,15 @@ namespace MangaReader
                     DateAdded TEXT DEFAULT CURRENT_TIMESTAMP,
                     IsFavorite INTEGER DEFAULT 0
                 )";
-            connection.Execute(createTableSql);
+            connection.Execute(createProgressSql);
+
+            // 2. NEW: Settings table
+            string createSettingsSql = @"
+                CREATE TABLE IF NOT EXISTS Settings (
+                    Key TEXT PRIMARY KEY,
+                    Value TEXT
+                )";
+            connection.Execute(createSettingsSql);
         }
 
         // Fast batch-insert so 1,092 items don't freeze the app on first launch
@@ -105,6 +113,20 @@ namespace MangaReader
                 INSERT INTO MangaProgress (FolderPath, IsFavorite) VALUES (@Folder, @IsFavorite)
                 ON CONFLICT(FolderPath) DO UPDATE SET IsFavorite = @IsFavorite";
             connection.Execute(sql, new { Folder = folderPath, IsFavorite = isFavorite ? 1 : 0 });
+        }
+
+        public static string GetSetting(string key, string defaultValue)
+        {
+            using var connection = new SqliteConnection(ConnectionString);
+            var value = connection.QueryFirstOrDefault<string>("SELECT Value FROM Settings WHERE Key = @Key", new { Key = key });
+            return value ?? defaultValue;
+        }
+
+        public static void SaveSetting(string key, string value)
+        {
+            using var connection = new SqliteConnection(ConnectionString);
+            string sql = "INSERT INTO Settings (Key, Value) VALUES (@Key, @Value) ON CONFLICT(Key) DO UPDATE SET Value = @Value";
+            connection.Execute(sql, new { Key = key, Value = value });
         }
     }
 }
