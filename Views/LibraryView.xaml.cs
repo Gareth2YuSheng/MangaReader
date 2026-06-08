@@ -236,7 +236,9 @@ namespace MangaReader.Views
             var foldersForThisPage = _allMangaFolders.Skip(startIndex).Take(_itemsPerPage).ToList();
 
             int totalPages = Math.Max(1, (int)Math.Ceiling((double)_allMangaFolders.Count / _itemsPerPage));
-            LibPageIndicator.Text = $"Page {pageIndex + 1} / {totalPages}";
+            // Update the interactive text boxes
+            PageInputBox.Text = (pageIndex + 1).ToString();
+            TotalPagesIndicator.Text = $" / {totalPages}";
 
             var pageItems = await Task.Run(() =>
             {
@@ -509,6 +511,55 @@ namespace MangaReader.Views
             if (settings.ShowDialog() == true)
             {
                 _ = PopulateLibraryViewAsync();
+            }
+        }
+
+        // --- PAGE JUMPING LOGIC ---
+        private async void PageInputBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            // Trigger the jump when the user hits Enter
+            if (e.Key == Key.Enter)
+            {
+                await JumpToEnteredPage();
+
+                // Remove focus from the text box so they can use keyboard hotkeys again
+                Keyboard.ClearFocus();
+                e.Handled = true;
+            }
+        }
+
+        private async void PageInputBox_LostFocus(object sender, RoutedEventArgs e)
+        {
+            // Also trigger if they type a number and click anywhere else on the screen
+            await JumpToEnteredPage();
+        }
+
+        private async Task JumpToEnteredPage()
+        {
+            if (int.TryParse(PageInputBox.Text, out int desiredPage))
+            {
+                int maxPages = Math.Max(1, (int)Math.Ceiling((double)_allMangaFolders.Count / _itemsPerPage));
+
+                // Convert to 0-based index and clamp within valid range bounds
+                int targetIndex = desiredPage - 1;
+                if (targetIndex < 0) targetIndex = 0;
+                if (targetIndex >= maxPages) targetIndex = maxPages - 1;
+
+                if (_currentLibraryPage != targetIndex)
+                {
+                    _currentLibraryPage = targetIndex;
+                    await LoadLibraryPageAsync(_currentLibraryPage);
+                }
+                else
+                {
+                    // If they typed a number that clamped to their current page, just reset the text visually
+                    PageInputBox.Text = (_currentLibraryPage + 1).ToString();
+                }
+            }
+            else
+            {
+                // Reset if they typed gibberish
+                PageInputBox.Text = (_currentLibraryPage + 1).ToString();
             }
         }
     }

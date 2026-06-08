@@ -162,7 +162,16 @@
             <Button x:Name="LibFirstButton" Content="&lt;&lt;" Focusable="False" Width="70" Height="28" Margin="5" Click="LibFirstButton_Click"/>
             <Button x:Name="LibPrevButton" Content="&lt;" Focusable="False" Width="70" Height="28" Margin="5" Click="LibPrevButton_Click"/>
 
-            <TextBlock x:Name="LibPageIndicator" Text="Page 1 / 59" Foreground="White" VerticalAlignment="Center" Margin="15,0" FontSize="14"/>
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="15,0">
+                <TextBlock Text="Page " Foreground="White" FontSize="14" VerticalAlignment="Center"/>
+
+                <TextBox x:Name="PageInputBox" Width="40" Height="26" Text="1" TextAlignment="Center" 
+             VerticalContentAlignment="Center" Background="#333" Foreground="White" 
+             BorderThickness="1" BorderBrush="#555"
+             KeyDown="PageInputBox_KeyDown" LostFocus="PageInputBox_LostFocus"/>
+
+                <TextBlock x:Name="TotalPagesIndicator" Text=" / 1" Foreground="White" FontSize="14" VerticalAlignment="Center"/>
+            </StackPanel>
 
             <Button x:Name="LibNextButton" Content="&gt;" Focusable="False" Width="70" Height="28" Margin="5" Click="LibNextButton_Click"/>
             <Button x:Name="LibLastButton" Content="&gt;&gt;" Focusable="False" Width="70" Height="28" Margin="5" Click="LibLastButton_Click"/>
