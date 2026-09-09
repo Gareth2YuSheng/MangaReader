@@ -14,11 +14,17 @@
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
                     <Button x:Name="BackButton" Content="← Back to Library" Focusable="False"
                             Padding="12,5,12,5" Click="BackButton_Click"/>
-                    <TextBlock x:Name="PageIndicator" Text="Page 0 / 0" Foreground="LightGray" 
+                    <TextBlock x:Name="PageIndicator" Text="Page 0 / 0" Foreground="LightGray"
                                VerticalAlignment="Center" Margin="15,0,0,0" FontSize="14"/>
                 </StackPanel>
 
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <Button x:Name="FavoriteButton" Content="♡" Focusable="False"
+                            Width="36" Height="36" Margin="0,0,12,0" Padding="0"
+                            Background="Transparent" BorderThickness="0"
+                            Foreground="#AAAAAA" FontSize="24" Cursor="Hand"
+                            VerticalContentAlignment="Center" HorizontalContentAlignment="Center"
+                            ToolTip="Mark this manga as a favourite (F)" Click="FavoriteButton_Click"/>
                     <TextBlock Text="Tags:" Foreground="LightGray" VerticalAlignment="Center" Margin="0,0,10,0"/>
 
                     <ItemsControl ItemsSource="{Binding CurrentReaderTags}" VerticalAlignment="Center">

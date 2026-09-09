@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 
 namespace MangaReader.Views
 {
@@ -20,6 +21,7 @@ namespace MangaReader.Views
         private List<string> _readerImageFiles = new List<string>();
         private int _currentReaderIndex = 0;
         private string _currentReaderFolderPath = "";
+        private bool _currentReaderIsFavorite = false;
         private readonly string[] _validExtensions = { ".jpg", ".jpeg", ".png", ".webp" };
 
         public ReaderView()
@@ -59,6 +61,9 @@ namespace MangaReader.Views
                     var existingTags = dbData[folderPath].Tags.Split(',').Select(t => t.Trim());
                     foreach (var t in existingTags) CurrentReaderTags.Add(t);
                 }
+
+                _currentReaderIsFavorite = dbData.ContainsKey(folderPath) && dbData[folderPath].IsFavorite;
+                UpdateFavoriteButtonVisual();
             }
             else
             {
@@ -184,6 +189,30 @@ namespace MangaReader.Views
             }
             TagSuggestionsControl.ItemsSource = existingTags;
             TagSuggestionsPopup.IsOpen = true;
+        }
+
+        // --- FAVOURITE LOGIC ---
+        public void ToggleFavorite()
+        {
+            if (string.IsNullOrEmpty(_currentReaderFolderPath)) return;
+
+            _currentReaderIsFavorite = !_currentReaderIsFavorite;
+            DatabaseManager.UpdateFavoriteStatus(_currentReaderFolderPath, _currentReaderIsFavorite);
+            UpdateFavoriteButtonVisual();
+        }
+
+        private void FavoriteButton_Click(object sender, RoutedEventArgs e)
+        {
+            ToggleFavorite();
+            this.Focus();
+        }
+
+        private void UpdateFavoriteButtonVisual()
+        {
+            FavoriteButton.Content = _currentReaderIsFavorite ? "♥" : "♡";
+            FavoriteButton.Foreground = _currentReaderIsFavorite
+                ? new SolidColorBrush(Color.FromRgb(0xFF, 0x4B, 0x4B))
+                : new SolidColorBrush(Color.FromRgb(0xAA, 0xAA, 0xAA));
         }
 
         public void GoToFirstPage()

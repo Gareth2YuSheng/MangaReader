@@ -1,4 +1,5 @@
 ﻿using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 
 namespace MangaReader
@@ -62,6 +63,12 @@ namespace MangaReader
                 else if (e.Key == Key.End)
                 {
                     ReaderComponent.GoToLastPage();
+                    e.Handled = true;
+                }
+                // NEW: Toggle favourite (ignored while typing a tag)
+                else if (e.Key == Key.F && Keyboard.FocusedElement is not TextBox)
+                {
+                    ReaderComponent.ToggleFavorite();
                     e.Handled = true;
                 }
                 else if (e.Key == Key.Escape)
