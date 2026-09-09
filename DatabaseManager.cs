@@ -2,16 +2,31 @@
 using Microsoft.Data.Sqlite;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 
 namespace MangaReader
 {
     public static class DatabaseManager
     {
-        private const string ConnectionString = "Data Source=manga_library.db";
+        // Fixed home for the database so it survives rebuilds / republishes to different folders.
+        private static readonly string DbPath = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "MangaReader", "manga_library.db");
+
+        private static readonly string ConnectionString = $"Data Source={DbPath}";
 
         public static void InitializeDatabase()
         {
+            Directory.CreateDirectory(Path.GetDirectoryName(DbPath)!);
+
+            // One-time migration: if there's no central DB yet but an old one sits next to the exe, adopt it.
+            if (!File.Exists(DbPath))
+            {
+                string legacyPath = Path.Combine(AppContext.BaseDirectory, "manga_library.db");
+                if (File.Exists(legacyPath)) File.Copy(legacyPath, DbPath);
+            }
+
             using var connection = new SqliteConnection(ConnectionString);
             connection.Open();
 
