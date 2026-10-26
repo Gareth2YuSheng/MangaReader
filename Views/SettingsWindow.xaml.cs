@@ -22,6 +22,10 @@ namespace MangaReader.Views
 
         private void SaveButton_Click(object sender, RoutedEventArgs e)
         {
+            // If the library moved (e.g. C: -> D:), carry the read/favorite/tag data over to the new paths
+            string oldRootPath = DatabaseManager.GetSetting("RootPath", "");
+            DatabaseManager.CopyProgressToNewRoot(oldRootPath, PathTextBox.Text);
+
             DatabaseManager.SaveSetting("RootPath", PathTextBox.Text);
 
             // Save the toggle state

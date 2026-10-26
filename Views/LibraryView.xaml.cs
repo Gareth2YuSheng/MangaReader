@@ -109,7 +109,7 @@ namespace MangaReader.Views
                 .ToList();
 
             DatabaseManager.SyncNewFolders(_masterFolderCache);
-            DatabaseManager.CleanOrphanedRecords(_masterFolderCache);
+            DatabaseManager.CleanOrphanedRecords(currentPath, _masterFolderCache);
 
             PopulateTagDropdown();
         }

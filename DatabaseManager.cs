@@ -144,7 +144,31 @@ namespace MangaReader
             connection.Execute(sql, new { Key = key, Value = value });
         }
 
-        public static void CleanOrphanedRecords(IEnumerable<string> validFolderPaths)
+        // Copies read/favorite/tag data from folders under the old root onto the same folder names under the new root,
+        // so moving the library to another drive keeps its progress. The old rows are left in place.
+        public static void CopyProgressToNewRoot(string oldRootPath, string newRootPath)
+        {
+            if (string.IsNullOrWhiteSpace(oldRootPath) || string.IsNullOrWhiteSpace(newRootPath)) return;
+
+            string oldPrefix = ToRootPrefix(oldRootPath);
+            string newPrefix = ToRootPrefix(newRootPath);
+            if (string.Equals(oldPrefix, newPrefix, StringComparison.OrdinalIgnoreCase)) return;
+
+            using var connection = new SqliteConnection(ConnectionString);
+            string sql = @"
+                INSERT INTO MangaProgress (FolderPath, IsRead, Tags, DateAdded, IsFavorite)
+                SELECT @NewPrefix || substr(FolderPath, length(@OldPrefix) + 1), IsRead, COALESCE(Tags, ''), DateAdded, COALESCE(IsFavorite, 0)
+                FROM MangaProgress
+                WHERE substr(FolderPath, 1, length(@OldPrefix)) = @OldPrefix COLLATE NOCASE
+                ON CONFLICT(FolderPath) DO UPDATE SET
+                    IsRead = MAX(IsRead, excluded.IsRead),
+                    IsFavorite = MAX(COALESCE(IsFavorite, 0), excluded.IsFavorite),
+                    Tags = CASE WHEN COALESCE(Tags, '') = '' THEN excluded.Tags ELSE Tags END,
+                    DateAdded = MIN(DateAdded, excluded.DateAdded)";
+            connection.Execute(sql, new { OldPrefix = oldPrefix, NewPrefix = newPrefix });
+        }
+
+        public static void CleanOrphanedRecords(string rootPath, IEnumerable<string> validFolderPaths)
         {
             using var connection = new SqliteConnection(ConnectionString);
             connection.Open();
@@ -152,9 +176,13 @@ namespace MangaReader
             // 1. Get every folder path currently saved in the database
             var dbPaths = connection.Query<string>("SELECT FolderPath FROM MangaProgress").ToList();
 
-            // 2. Cross-reference them to find paths that are in the DB, but NOT on the hard drive
+            // 2. Cross-reference them to find paths under this root that are in the DB, but NOT on the hard drive.
+            //    Records under other roots are left alone, so switching root folders never wipes them.
+            string rootPrefix = ToRootPrefix(rootPath);
             var validPathSet = new HashSet<string>(validFolderPaths, StringComparer.OrdinalIgnoreCase);
-            var orphans = dbPaths.Where(path => !validPathSet.Contains(path)).ToList();
+            var orphans = dbPaths
+                .Where(path => path.StartsWith(rootPrefix, StringComparison.OrdinalIgnoreCase) && !validPathSet.Contains(path))
+                .ToList();
 
             // 3. If we found any ghosts, delete them!
             if (orphans.Count > 0)
@@ -166,6 +194,12 @@ namespace MangaReader
                 connection.Execute(sql, orphans.Select(f => new { Folder = f }), transaction: transaction);
                 transaction.Commit();
             }
+        }
+
+        // "D:\Doujins" and "D:\Doujins\" both become "D:\Doujins\" so prefix checks can't match "D:\Doujins2\..."
+        private static string ToRootPrefix(string rootPath)
+        {
+            return rootPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
         }
     }
 }
